@@ -1,0 +1,50 @@
+---
+- name: install Apache httpd packages
+  yum:
+    name: "{{ item }}"
+    state: present
+  loop:
+    - httpd
+    - httpd-tools
+
+- name: add ssl certs on snapshot artifactory
+  copy:
+    content: "{{ snapshot_wsgc_com_crt }}"
+    dest: "/etc/pki/tls/certs/snapshotrepo.wsgc.com.crt"
+    mode: 0644
+  when: repo_type == 'snapshot'
+
+- name: add ssl certs on release artifactory
+  copy:
+    content: "{{ release_wsgc_com_crt }}"
+    dest: "/etc/pki/tls/certs/artifactory.wsgc.com.crt"
+    mode: 0644
+  when: repo_type == 'release'
+
+- name: add ssl privatekey on snapshot artifactory
+  copy:
+    content: "{{ snapshot_wsgc_com_key }}"
+    dest: "/etc/pki/tls/private/snapshotrepo.wsgc.com.key"
+    mode: 0644
+  when: repo_type == 'snapshot'
+
+- name: add ssl privatekey on release artifactory
+  copy:
+    content: "{{ release_wsgc_com_key }}"
+    dest: "/etc/pki/tls/private/artifactory.wsgc.com.key"
+    mode: 0644
+  when: repo_type == 'release'
+
+- name: ensure httpd has stopped and enabled on boot
+  service:
+    name: httpd
+    state: stopped
+    enabled: yes
+
+- name: add httpd config file.
+  template:
+    src: "{{ repo_type }}/httpd/conf.d/artifactory.conf.j2"
+    dest: /etc/httpd/conf.d/artifactory.conf
+    mode: 0644
+  notify:
+    - restart httpd

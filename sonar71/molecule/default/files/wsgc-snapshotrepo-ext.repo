@@ -1,0 +1,6 @@
+[wsgc-snapshotrepo-ext]
+name=wsgc-snapshot-ext repository
+mirrorlist=https://pkgs.wsgc.com/linux/mirrors/mirrors.ecom.snapshot-ext
+enabled=0
+gpgcheck=0
+sslverify=0

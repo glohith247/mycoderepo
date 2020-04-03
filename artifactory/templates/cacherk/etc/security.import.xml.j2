@@ -1,0 +1,121 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<security version="v8">
+  <users>
+    <user>
+      <username>anonymous</username>
+      <password>{{ cacherk_anonymous_password }}</password>
+      <admin>false</admin>
+      <enabled>true</enabled>
+      <updatableProfile>false</updatableProfile>
+      <accountNonExpired>true</accountNonExpired>
+      <credentialsNonExpired>true</credentialsNonExpired>
+      <accountNonLocked>true</accountNonLocked>
+      <transientUser>false</transientUser>
+      <groups/>
+      <lastLoginTimeMillis>0</lastLoginTimeMillis>
+      <lastAccessTimeMillis>0</lastAccessTimeMillis>
+    </user>
+    <user>
+      <username>admin</username>
+      <password>{{ cacherk_admin_password }}</password>
+      <email>wso@wsgc.com</email>
+      <admin>true</admin>
+      <enabled>true</enabled>
+      <updatableProfile>true</updatableProfile>
+      <accountNonExpired>true</accountNonExpired>
+      <credentialsNonExpired>true</credentialsNonExpired>
+      <accountNonLocked>true</accountNonLocked>
+      <realm>internal</realm>
+      <privateKey>{{ cacherk_priv_key }}</privateKey>
+      <publicKey>{{ cacherk_pub_key }}</publicKey>
+      <transientUser>false</transientUser>
+      <groups/>
+      <lastLoginTimeMillis>1366054894295</lastLoginTimeMillis>
+      <lastLoginClientIp>192.168.63.1</lastLoginClientIp>
+      <lastAccessTimeMillis>0</lastAccessTimeMillis>
+    </user>
+  </users>
+  <groups>
+    <group>
+      <groupName>publishers</groupName>
+      <description>read/write with annotate privileges</description>
+      <newUserDefault>false</newUserDefault>
+    </group>
+    <group>
+      <groupName>readers</groupName>
+      <description>A group for read-only users</description>
+      <newUserDefault>true</newUserDefault>
+    </group>
+  </groups>
+  <acls>
+    <acl>
+      <permissionTarget>
+        <name>Any Remote</name>
+        <repoKeys>
+          <string>ANY REMOTE</string>
+        </repoKeys>
+        <includes>
+          <string>**</string>
+        </includes>
+        <excludes/>
+      </permissionTarget>
+      <aces>
+        <ace>
+          <principal>anonymous</principal>
+          <group>false</group>
+          <mask>7</mask>
+        </ace>
+      </aces>
+      <updatedBy>_system_</updatedBy>
+    </acl>
+    <acl>
+      <permissionTarget>
+        <name>Anything</name>
+        <repoKeys>
+          <string>ANY</string>
+        </repoKeys>
+        <includes>
+          <string>**</string>
+        </includes>
+        <excludes/>
+      </permissionTarget>
+      <aces>
+        <ace>
+          <principal>readers</principal>
+          <group>true</group>
+          <mask>1</mask>
+        </ace>
+        <ace>
+          <principal>anonymous</principal>
+          <group>false</group>
+          <mask>1</mask>
+        </ace>
+      </aces>
+      <updatedBy>_system_</updatedBy>
+    </acl>
+    <acl>
+      <permissionTarget>
+        <name>Deploy</name>
+        <repoKeys>
+          <string>ANY LOCAL</string>
+        </repoKeys>
+        <includes>
+          <string>**</string>
+        </includes>
+        <excludes/>
+      </permissionTarget>
+      <aces>
+        <ace>
+          <principal>anonymous</principal>
+          <group>false</group>
+          <mask>1</mask>
+        </ace>
+        <ace>
+          <principal>publishers</principal>
+          <group>true</group>
+          <mask>7</mask>
+        </ace>
+      </aces>
+    </acl>
+  </acls>
+</security>

@@ -1,0 +1,32 @@
+---
+- name: Prepare
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Install python for Ansible
+      raw: test -e /usr/bin/python || (apt -y update && apt install -y python-minimal)
+      become: true
+      changed_when: false
+    - name: copy repo files
+      copy:
+        src: files/
+        dest: /etc/yum.repos.d/
+      become: true
+    - name: copy repo file with secret (shhh!)
+      template:
+        src: secret/wsgc-devops-snapshotrepo.repo
+        dest: /etc/yum.repos.d/
+      become: true
+    - name: install epel-release package
+      package:
+        name: epel-release
+        state: present
+      become: true
+  vars:
+    snapshotrepo_password: !vault |
+              $ANSIBLE_VAULT;1.1;AES256
+              65623837326362343437636135643261366530636333343532613137343135303436613362343862
+              6462373262653563636331336431633237656361666164380a663630323231373432343431663536
+              66653065363632333635333236306639303938626264303031653764616662653265353638633565
+              3461373732383137620a363734363537633731626535383439306561306363323663636339313338
+              3037

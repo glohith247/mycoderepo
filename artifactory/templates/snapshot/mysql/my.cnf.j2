@@ -1,0 +1,54 @@
+[mysqld]
+datadir={{ mysql_dir }}
+user=mysql
+
+tmpdir={{ mysql_tmpdir }}
+
+symbolic-links=0
+
+# The maximum size of the binary payload the server can handle
+max_allowed_packet=8M
+
+# By default innodb engine use one file for all databases and tables. We recommend changing this to one file per table.
+# NOTE: This will take effect only if Artifactory tables are not created yet! Need to be set and MySQL restarted before starting Artifactory for the first time.
+innodb_file_per_table
+
+# Theses are tuning parameters that can be set to control and increase the memory buffer sizes.
+innodb_buffer_pool_size=1536M
+tmp_table_size=512M
+max_heap_table_size=512M
+
+# Theses control the innodb log files size and can be changed only when MySQL is down and MySQL will not start if there are some innodb log files left in the datadir.
+# So, changing theses means removing the old innodb log files before start.
+innodb_log_file_size=256M
+innodb_log_buffer_size=4M
+
+
+## Customizations
+back-log                        = 100
+expire-logs-days                = 7
+interactive-timeout             = 3600
+thread-cache-size               = 16
+table-open-cache                = 4096
+table-definition-cache          = 2048
+relay-log-space-limit           = 16G
+join-buffer-size                = 1M
+read-buffer-size                = 1M
+read-rnd-buffer-size            = 1M
+query-cache-size                = 32M
+key-buffer-size                 = 64M
+myisam-sort-buffer-size         = 128M
+max-connect-errors              = 10000
+wait-timeout                    = 3600
+# skip_name_resolve               = ON
+
+[mysqld_safe]
+log-error=/var/log/mariadb/mysqld.log
+
+[client-server]
+socket={{ mysql_socket }}
+port=3306
+
+[client]
+user=root
+password={{ mysql_root_password }}

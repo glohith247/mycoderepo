@@ -1,0 +1,7 @@
+{
+    "graph": "{{ docker_daemon_data_path }}",
+    "dns-search" : [
+        "wsgc.com"
+    ],
+    "insecure-registries" : [{% for item in docker_daemon_insecure_registry %} "{{ item }}" {%- if not loop.last -%} , {% endif %} {% endfor %}]
+}

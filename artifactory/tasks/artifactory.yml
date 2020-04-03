@@ -1,0 +1,203 @@
+---
+# tasks file for artifactory
+- name: create group for artifactory
+  group:
+    name: "{{ artifactory_group }}"
+    state: present
+
+- name: create user for artifactory
+  user:
+    name: "{{ artifactory_user }}"
+    groups: "{{ artifactory_group }}"
+    system: yes
+
+- name: installing Artifactory Enterprise {{ artifactory_version }} version
+  yum:
+    name: http://artifactory.wsgc.com/artifactory/simple/ext-release-local/jfrog-artifactory-pro/jfrog-artifactory-pro/{{ artifactory_version }}/jfrog-artifactory-pro-{{ artifactory_version }}.rpm
+    state: present
+
+- name: make sure artifactory service is enabled on boot
+  service:
+    name: artifactory
+    state: stopped
+    enabled: yes
+
+- name: remove files from ARTIFACTORY_HOME/etc directory
+  file:
+    state: absent
+    path: "/var/opt/jfrog/artifactory/{{ item }}"
+  with_fileglob:
+    - default
+    - db.properties
+    - java.keystore
+    - logback.xml
+    - binarystore.xml
+
+- name: add java keystore
+  copy:
+    src: "files/{{ repo_type }}/java.keystore"
+    dest: "{{ artifactory_home }}/etc/java.keystore"
+    owner: artifactory
+    mode: 0755
+
+- name: add files into ARTIFACTORY_HOME/etc directory
+  template:
+    src: "{{ item }}"
+    dest: "{{ artifactory_home }}/etc/{{ item | basename | regex_replace('\\.j2','') }}"
+    owner: artifactory
+    mode: 0775
+  with_fileglob:
+    - ../templates/{{ repo_type }}/etc/*.j2
+
+- name: Download mysql JDBC connector
+  get_url:
+    url: https://artifactory.wsgc.com/artifactory/ext-release-local/mysql-connector-java/mysql-connector-java/8.0.16.tar/mysql-connector-java-8.0.16.tar.gz
+    dest: /tmp
+    mode: '0644'
+    validate_certs: no
+
+- name: extract mysql JDBC connector tar.gz
+  unarchive:
+    src: /tmp/mysql-connector-java-8.0.16.tar.gz
+    dest: /tmp
+    mode: '0644'
+    remote_src: yes
+
+- name: move JDBC Connector to tomcat lib folder
+  command: mv /tmp/mysql-connector-java-8.0.16/mysql-connector-java-8.0.16.jar {{ artifactory_home }}/tomcat/lib
+
+- name: primary HA node properties file
+  when: ha_node_type is defined and ha_node_type == 'primary'
+  template:
+    src: "{{ repo_type }}/etc/primary.ha-node.properties"
+    dest: "{{ artifactory_home }}/etc/ha-node.properties"
+    owner: artifactory
+    group: artifactory
+    mode: 0775
+
+- name: secondary HA node properties file
+  when: ha_node_type is defined and ha_node_type == 'secondary'
+  template:
+    src: "{{ repo_type }}/etc/secondary.ha-node.properties"
+    dest: "{{ artifactory_home }}/etc/ha-node.properties"
+    owner: artifactory
+    group: artifactory
+    mode: 0775
+
+# create security directory
+- name: Creates security directory
+  file:
+    path: "{{ artifactory_home }}/etc/security"
+    state: directory
+    owner: artifactory
+
+- name: add master key
+  copy:
+    content: 6b38e92a56215011211eb31f08f85484
+    dest: "{{ artifactory_home }}/etc/security/master.key"
+    owner: artifactory
+    group: artifactory
+    mode: 0644
+
+- name: add artifactory.key
+  copy:
+    content: "{{ artifactory_key }}"
+    dest: "{{ artifactory_home }}/etc/security/artifactory.key"
+    owner: artifactory
+    group: artifactory
+    mode: 0644
+
+- name: add license file
+  when: ha_node_type is undefined
+  copy:
+    src: "files/{{ repo_type }}/etc/artifactory.lic"
+    dest: "{{ artifactory_license_path }}"
+    owner: artifactory
+    mode: 0644
+
+- name: add HA license file
+  when: ha_node_type is defined
+  copy:
+    src: "files/{{ repo_type }}/etc/artifactory.cluster.license"
+    dest: "{{ artifactory_license_path }}"
+    owner: artifactory
+    mode: 0644
+
+- name: remove tomcat config file
+  file:
+    state: absent
+    path: "{{ artifactory_home }}/tomcat/conf/{{ item }}"
+  with_fileglob:
+     - logging.properties
+     - server.xml
+
+- name: add tomcat customized files
+  template:
+    src: "{{ item }}"
+    dest: "{{ artifactory_home }}/tomcat/conf/{{ item | basename | regex_replace('\\.j2','') }}"
+    mode: 0775
+  with_fileglob:
+    - "../templates/{{ repo_type }}/tomcat/conf/*.j2"
+
+- name: create Artifactory custom log directory
+  file:
+    path: "{{ artifactory_log_dir }}"
+    owner: artifactory
+    state: directory
+    # recurse: yes
+
+- name: Create symbolic link
+  file:
+    src: "{{ artifactory_log_dir }}"
+    dest: /var/opt/jfrog/artifactory/logs
+    owner: artifactory
+    group: ecomdevelopers
+    state: link
+
+- name: add bashrc
+  template:
+    src: "{{ repo_type }}/home/artifactory/bashrc.j2"
+    dest: "/home/artifactory/.bashrc"
+    owner: artifactory
+    group: artifactory
+    mode: 0644
+
+- name: ensure data dir exists
+  file: path={{ artifactory_home }}/data/ state=directory
+
+- name: cp and rm
+  command: "{{item}}"
+  with_items:
+    - mv {{ artifactory_home }}/data {{ artifactory_new_dir }}/
+
+- name: updating directories with right owner and group
+  file:
+    path: "{{item}}"
+    owner: artifactory
+    group: ecomdevelopers
+    recurse: yes
+  with_items:
+    - "{{ artifactory_opt_dir }}"
+    - "{{ artifactory_etc_dir }}"
+    - "{{ artifactory_home }}"
+    - "{{ artifactory_new_dir }}/data"
+
+- name: create symlink
+  file:
+    src: "{{ artifactory_new_dir }}/data"
+    dest: "{{ artifactory_home }}/data"
+    owner: artifactory
+    group: ecomdevelopers
+    state: link
+
+- name: Start both httpd and artifactory service
+  service:
+    name: "{{item}}"
+    state: started
+  with_items:
+    - httpd
+    - artifactory
+
+
+
+

@@ -1,0 +1,13 @@
+---
+# defaults file for docker
+
+docker_package: docker-ce.x86_64
+docker_daemon_data_path: "/apps/data/docker"
+docker_daemon_insecure_registry:
+    - docker-dev.wsgc.com
+    - container-registry.nonprod.wsgc.com
+    - container-registry01.nonprod.wsgc.com
+    - container-registry02.nonprod.wsgc.com
+    - container-registry01.wsgc.com
+    - container-registry02.wsgc.com
+    - container-registry03.wsgc.com

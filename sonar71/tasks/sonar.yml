@@ -1,0 +1,66 @@
+---
+- name: create sonar user
+  user:
+    name: sonar
+    groups:
+      - docker
+    createhome: false
+
+- name: create sonar app directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    mode: 0755
+    owner: sonar
+    group: sonar
+  with_items:
+    - "/apps/"
+    - "/apps/backups"
+    - "/apps/sonarqube/"
+    - "/apps/postgresql/"
+    - "/apps/sonarqube/extensions/"
+    - "/apps/sonarqube/docker-compose/"
+    - "/apps/sonarqube/conf/"
+
+- name: Install Latest JDK
+  yum:
+    name: wsgc-jdk8-latest
+    state: latest
+    enablerepo: "wsgc-*"
+    disablerepo: "*"
+
+- name: Copy latest cacerts
+  copy:
+    src: /apps/jdk8-latest/jre/lib/security/cacerts
+    dest: /apps/sonarqube/conf/cacerts
+    remote_src: yes
+
+- name: Add sonarqube compose file into project directory
+  template:
+    src: docker-compose.yml.j2
+    dest: /apps/sonarqube/docker-compose/docker-compose.yml
+
+- name: Setup Sonar configuration
+  template:
+    src: sonar.properties.j2
+    dest: /apps/sonarqube/conf/sonar.properties
+  notify:
+    - restart docker
+
+- name: login to docker-dev.wsgc.com
+  docker_login:
+    registry: docker-dev.wsgc.com
+    username: wsgc-docker-user
+    password: "{{ docker_password }}"
+
+- name: Sonar Docker Service
+  docker_service:
+    project_src: "/apps/sonarqube/docker-compose/"
+  register: output
+
+- name: assert container states are running
+  assert:
+    that:
+      - "db.dockercompose_db_1.state.running"
+      - "sonarqube.dockercompose_sonarqube_1.state.running"
+      - "pgbackups.dockercompose_pgbackups_1.state.running"

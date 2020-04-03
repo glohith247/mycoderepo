@@ -1,0 +1,82 @@
+---
+- name: Configure MariaDB repository
+  yum_repository:
+    name: mariadb
+    description: mariadb yum repo
+    baseurl: https://artifactory.wsgc.com/artifactory/mariadb/10.2.9/centos7-amd64
+    gpgcheck: no
+    sslverify: no
+    state: present
+
+- name: Install MariaDB packages
+  yum:
+     name: "{{ item }}"
+     state: present
+  loop:
+    - MariaDB
+    - MariaDB-server
+    - MySQL-python
+
+
+- name: Place mysql config file.
+  template:
+    src: my.cnf.j2
+    dest: /etc/my.cnf.d/my.cnf
+    mode: 0644
+
+- name: Start MariaDB service
+  service: name=mysqld state=started enabled=yes
+
+- name: Ansible copy files remote to remote
+  shell: 'cp -r /var/lib/mysql/. /apps/mysql/'
+
+- name: change the permissions
+  file:
+    path: "{{ mysql_dir  }}"
+    owner: mysql
+    group: mysql
+    recurse: yes
+
+- name: Change password for root user
+  mysql_user:
+    login_user: root
+    login_password: ""
+    name: root
+    host: "localhost"
+    password: password 
+
+- name: Remove the test database
+  mysql_db:
+    name: test
+    login_user: root
+    login_password: "{{ mysql_root_password }}"
+    state: absent
+
+- name: Remove anonymous users
+  mysql_user:
+    name: ''
+    login_user: root
+    login_password: "{{ mysql_root_password }}"
+    state: absent
+
+- name: Create artifactory database in mariadb
+  mysql_db:
+    name: artdb
+    state: present
+    login_user: root
+    login_password: "{{ mysql_root_password }}"
+
+- name: Create artifactory database user in mariadb
+  mysql_user:
+    name: "{{ artifactory_mysql_username }}"
+    password: "{{ artifactory_mysql_password }}"
+    host: "{{ item }}"
+    priv: "artdb.*:ALL,GRANT"
+    login_user: root
+    login_password: "{{ mysql_root_password }}"
+  loop:
+    - localhost
+    - "%"
+  notify:
+    - restart mysqld
+

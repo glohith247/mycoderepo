@@ -1,0 +1,29 @@
+{{ artifactory_log_dir }}/*.log {
+   copytruncate
+   daily
+   rotate 7
+   compress
+   missingok
+   size 20M
+}
+
+{{ artifactory_log_dir }}/catalina/*.log {
+   copytruncate
+   daily
+   rotate 7
+   compress
+   missingok
+   size 20M
+}
+
+/var/log/httpd/*log {
+   daily
+   rotate 7
+   size 20M
+   missingok
+   sharedscripts
+   delaycompress
+   postrotate
+       /sbin/service httpd reload > /dev/null 2>/dev/null || true
+   endscript
+}

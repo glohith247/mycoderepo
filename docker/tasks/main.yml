@@ -1,0 +1,62 @@
+---
+# tasks file for docker
+- name: Install docker CE from WSI repo
+  yum:
+    enablerepo: wsgc-*
+    name: "{{ docker_package }}"
+    state: latest
+
+- name: create /etc/docker
+  file:
+    dest: /etc/docker
+    state: directory
+    owner: root
+    group: root
+
+- name: Configure docker daemon
+  template:
+    src: templates/docker_daemon.j2
+    dest: /etc/docker/daemon.json
+    owner: root
+    group: root
+    mode: 0644
+  notify:
+    - restart docker
+
+- name: install pip
+  package:
+    name: python-pip
+    state: present
+
+- name: setup python repo to use snapshotrepo for pypi
+  copy:
+    src: "templates/pip.conf"
+    dest: "/etc/pip.conf"
+
+- name: install docker python dependencies
+  pip:
+    name:
+      - "docker-compose"
+
+- name: create /etc/docker
+  file:
+    dest: /etc/docker
+    state: directory
+    owner: root
+    group: root
+
+- name: Configure docker daemon
+  template:
+    src: templates/docker_daemon.j2
+    dest: /etc/docker/daemon.json
+    owner: root
+    group: root
+    mode: 0644
+  notify:
+    - restart docker
+
+- name: Enable service docker
+  service:
+    name: docker
+    enabled: "True"
+    state: started

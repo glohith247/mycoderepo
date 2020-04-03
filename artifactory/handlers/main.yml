@@ -1,0 +1,16 @@
+---
+# handlers file for artifactory
+- name: restart mysqld
+  service:
+    name: mysqld
+    state: restarted
+
+- name: restart artifactory
+  service:
+    name: artifactory
+    state: restarted
+
+- name: restart httpd
+  service:
+    name: httpd
+    state: restarted

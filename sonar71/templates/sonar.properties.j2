@@ -1,0 +1,12 @@
+sonar.security.realm=LDAP
+ldap.bindDn=CN=ECBUILDER,OU=Resources,DC=wsgc,DC=com
+sonar.authenticator.downcase=true
+ldap.bindPassword={{ ldap_password }}
+ldap.url=ldaps://ssldap.wsgc.com:636
+ldap.authentication=simple
+ldap.user.request=(&(objectClass=person)(sAMAccountName={login}))
+ldap.user.baseDn=ou=WSGC Users,dc=wsgc,dc=com
+
+# Trust Store
+sonar.web.javaOpts=-Xmx2048m -Xms512m -XX:+HeapDumpOnOutOfMemoryError -Djavax.net.ssl.trustStore=/opt/sonarqube/conf/cacerts
+sonar.ce.javaOpts=-Djavax.net.ssl.trustStore=/opt/sonarqube/conf/cacerts

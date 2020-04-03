@@ -1,0 +1,28 @@
+---
+# tasks
+- name: install requirements
+  package:
+    name: "{{ artifactory_requirements }}"
+    state: present
+
+- name: set JAVA_HOME if configured.
+  template:
+    src: java_home.sh.j2
+    dest: /etc/profile.d/java_home.sh
+    mode: 0644
+
+- name: configure apache httpd
+  import_tasks: httpd.yml
+
+- name: artifactory customizations
+  import_tasks: artifactory.yml
+
+- name: logrotation
+  template:
+    src: "{{ repo_type }}/logrotate.d/artifactory-tomcat.j2"
+    dest: /etc/logrotate.d/artifactory-tomcat
+    mode: 0644
+
+- name: configure mysql database
+  import_tasks: mysql.yml
+  when: repo_type == 'snapshot' and artifactory_database == 'mysql'

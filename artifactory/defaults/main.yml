@@ -1,0 +1,33 @@
+---
+# defaults file for artifactory
+artifactory_requirements:
+  - java-11-openjdk-devel
+  - mod_ssl
+  - openssh
+  - net-tools
+
+artifactory_etc_dir: /etc/opt/jfrog/artifactory
+
+artifactory_opt_dir: /opt/jfrog/artifactory
+
+artifactory_default_file: /etc/opt/jfrog/artifactory/default
+
+artifactory_license_path: /etc/opt/jfrog/artifactory/artifactory.lic
+
+artifactory_home: /var/opt/jfrog/artifactory
+
+artifactory_log_dir: /var/log/weblogs/artifactory
+
+artifactory_user: artifactory
+
+artifactory_group: artifactory
+
+mysql_dir: /artifactory/mysql
+
+mysql_socket: /artifactory/mysql/mysql.sock
+
+mysql_tmpdir: /artifactory/mysql/mysqltmp
+
+artifactory_new_dir: /apps/artifactory
+
+

@@ -1,0 +1,6 @@
+---
+# handlers file for sonar71
+
+- name: restart nginx
+  service: name=nginx state=restarted
+  become: true

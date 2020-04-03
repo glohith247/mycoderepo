@@ -1,0 +1,45 @@
+---
+- name: install nginx
+  package:
+    name: nginx
+    state: present
+
+- name: Ensure ssl private exists
+  file:
+    path: /etc/ssl/private
+    state: directory
+
+- name: Include Certificate key
+  copy:
+    content: "{{ sonarqube_wsgc_com_key }}"
+    dest: /etc/ssl/private/sonarqube.wsgc.com.key
+
+- name: Include Certificate
+  copy:
+    content: "{{ sonarqube_wsgc_com_crt }}"
+    dest: /etc/ssl/certs/sonarqube.wsgc.com.crt
+
+- name: Include DHParam file
+  copy:
+    content: "{{ dhparam_pem }}"
+    dest: /etc/ssl/dhparam.pem
+
+- name: setup sonar proxy config
+  copy:
+    src: sonar_nginx_proxy.conf
+    dest: /etc/nginx/conf.d/sonar_nginx_proxy.conf
+  notify:
+    - restart nginx
+
+- name: replace default nginx config
+  copy:
+    src: default_nginx.conf
+    dest: /etc/nginx/nginx.conf
+  notify:
+    - restart nginx
+
+- name: Enable service nginx
+  service:
+    name: nginx
+    enabled: true
+    state: started

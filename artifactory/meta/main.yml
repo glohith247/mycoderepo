@@ -1,0 +1,18 @@
+---
+galaxy_info:
+  author: Devikiran Khode
+  role_name: artifactory
+  description: Install and configure artifactory enterprise.
+  license: Apache-2.0
+  company: Williams Sonoma Inc.
+  min_ansible_version: 2.6
+
+  platforms:
+    - name: EL
+      version:
+        - all
+
+  galaxy_tags:
+    - artifactory
+
+dependencies: []

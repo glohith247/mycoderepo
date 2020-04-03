@@ -1,0 +1,119 @@
+---
+- name: configure MariaDB repository
+  yum_repository:
+    name: mariadb
+    description: mariadb yum repo
+    baseurl: https://artifactory.wsgc.com/artifactory/mariadb/10.2.9/centos7-amd64
+    gpgcheck: no
+    sslverify: no
+    enabled: yes
+    state: present
+
+- name: install MariaDB packages
+  yum:
+     name: "{{ item }}"
+     state: present
+  loop:
+    - MariaDB-server
+    - MySQL-python
+
+- name: create mysql log directory
+  file:
+    path: /var/log/mariadb
+    state: directory
+
+- name: create mysql log file
+  file:
+    path: /var/log/mariadb/mysqld.log
+    owner: mysql
+    group: mysql
+    state: touch
+    mode: 0644
+
+- name: create mysql temp directory
+  file:
+    path: "{{ mysql_tmpdir }}"
+    owner: mysql
+    group: mysql
+    recurse: yes
+    state: directory
+
+- name: create Artifactory filestore
+  file:
+    path: /artifactory/data/filestore
+    owner: artifactory
+    state: directory
+
+- name: create mysql datadir directory
+  file:
+    path: "{{ mysql_dir }}"
+    owner: artifactory
+    state: directory
+
+- name: change datadir ownership recursively
+  file:
+    path: "{{ mysql_dir }}"
+    owner: mysql
+    group: mysql
+    recurse: yes
+    state: directory
+
+- name: place mysql config file.
+  template:
+    src: "{{ repo_type }}/mysql/my.cnf.j2"
+    dest: /etc/my.cnf
+    mode: 0644
+
+- name: init MariaDB
+  command: /usr/bin/mysql_install_db \
+    --defaults-file='/etc/my.cnf' \
+    --datadir='{{ mysql_dir }}'
+  when: fresh_install
+
+- name: ensure MariaDB service is started
+  service: name=mysqld state=started
+
+- name: change password for root user
+  mysql_user:
+    login_user: root
+    login_password: ""
+    name: "root"
+    host: "localhost"
+    password: "{{ mysql_root_password }}"
+    login_unix_socket: "{{ mysql_socket }}"
+  when: fresh_install
+
+- name: create artifactory database in mariadb
+  mysql_db:
+    name: artdb
+    state: present
+    login_user: "root"
+    login_password: "{{ mysql_root_password }}"
+    login_unix_socket: "{{ mysql_socket }}"
+  when: fresh_install
+
+- name: restart artifactory service
+  service:
+    name: artifactory
+    state: started
+  when: not fresh_install
+
+- name: restart httpd service
+  service:
+    name: httpd
+    state: started
+  when: not fresh_install
+
+- name: create artifactory database user in mariadb
+  mysql_user:
+    name: "{{ artifactory_mysql_username }}"
+    password: "{{ artifactory_mysql_password }}"
+    host: "localhost"
+    priv: "artdb.*:ALL,GRANT"
+    login_user: "root"
+    login_password: "{{ mysql_root_password }}"
+    login_unix_socket: "{{ mysql_socket }}"
+  when: fresh_install
+  notify:
+    - restart mysqld
+    - restart artifactory

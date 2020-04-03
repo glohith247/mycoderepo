@@ -1,0 +1,43 @@
+#!/bin/sh
+
+#Default values
+export ARTIFACTORY_HOME=/var/opt/jfrog/artifactory
+export ARTIFACTORY_USER=artifactory
+
+export TOMCAT_HOME=/opt/jfrog/artifactory/tomcat
+export ARTIFACTORY_PID=/var/opt/jfrog/run/artifactory.pid
+
+#see: bug https://www.jfrog.com/jira/browse/RTFACT-6328
+RUBY_COMPILE_INVOKED_DYNAMIC="-Djruby.compile.invokedynamic=false"
+
+#
+# from wsgc-apmagents package dependency, include any agent related jvm params
+#
+if [ -f /apps/apmagents/etc/profile ]
+then
+   source /apps/apmagents/etc/profile
+fi
+APPAGENT="/apps/apmagents/appagent/javaagent.jar"
+
+javaAgentArg=
+if [ -f "${APPAGENT}" ]
+then
+   if [ -n "${APPDYNAMICS_CONTROLLER_HOSTNAME}" -a \
+        -n "${APPDYNAMICS_CONTROLLER_PORT}" -a \
+        -n "${APPDYNAMICS_APPAGENT_TIERNAME}" -a \
+        -n "${APPDYNAMICS_APPAGENT_APPLICATIONNAME}" ]
+   then
+      javaAgentArg="-javaagent:${APPAGENT} \
+                    -Dappdynamics.controller.hostName=${APPDYNAMICS_CONTROLLER_HOSTNAME} \
+                    -Dappdynamics.controller.port=${APPDYNAMICS_CONTROLLER_PORT} \
+                    -Dappdynamics.agent.applicationName=${APPDYNAMICS_APPAGENT_APPLICATIONNAME} \
+                    -Dappdynamics.agent.tierName=${APPDYNAMICS_APPAGENT_TIERNAME} \
+                    -Dappdynamics.agent.nodeName=$(hostname --short)"
+   fi
+fi
+
+export JAVA_HOME=/usr/lib/jvm/jre
+export JAVA_OPTIONS="${javaAgentArg} ${RUBY_COMPILE_INVOKED_DYNAMIC} -server -Xms2g -Xmx12g -Xss256k -XX:+UseG1GC"
+
+# Timeout waiting for artifactory to start
+# START_TMO=60

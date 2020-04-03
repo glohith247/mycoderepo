@@ -1,0 +1,10 @@
+---
+- name: Install Docker
+  include_role:
+    name: docker
+
+- name: Run Sonar Tasks
+  include_tasks: sonar.yml
+
+- name: Run Proxy Tasks
+  include_tasks: proxy.yml

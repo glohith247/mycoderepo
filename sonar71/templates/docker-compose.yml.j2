@@ -1,0 +1,58 @@
+---
+version: "2"
+
+services:
+  sonarqube:
+    image: docker-dev.wsgc.com/sonarqube:7.1
+    ports:
+      - "9000:9000"
+    networks:
+      - sonarnet
+    environment:
+      - SONARQUBE_JDBC_URL=jdbc:postgresql://db:5432/sonar
+    volumes:
+      - /apps/sonarqube/conf:/opt/sonarqube/conf
+      - /apps/sonarqube/data:/opt/sonarqube/data
+      - /apps/sonarqube/extensions:/opt/sonarqube/extensions
+      - /apps/sonarqube/lib/bundled-plugins:/opt/sonarqube/lib/bundled-plugins
+    restart: always
+
+  db:
+    image: docker-dev.wsgc.com/postgres:9.6
+    networks:
+      - sonarnet
+    environment:
+      - POSTGRES_USER=sonar
+      - POSTGRES_PASSWORD={{ sonar_password }}
+    volumes:
+      - /apps/postgresql:/var/lib/postgresql
+      # This needs explicit mapping due to https://github.com/docker-library/postgres/blob/4e48e3228a30763913ece952c611e5e9b95c8759/Dockerfile.template#L52
+      - /apps/postgresql/data:/var/lib/postgresql/data
+    restart: always
+
+  pgbackups:
+    image: docker-dev.wsgc.com/postgres-backup
+    restart: always
+    networks:
+      - sonarnet
+    volumes:
+      - /apps/backups:/backups
+    links:
+      - db
+    depends_on:
+      - db
+    environment:
+      - POSTGRES_HOST=db
+      - POSTGRES_DB=sonar
+      - POSTGRES_USER=sonar
+      - POSTGRES_PASSWORD={{ sonar_password }}
+      - POSTGRES_EXTRA_OPTS=-Z9 --schema=public --blobs
+      - SCHEDULE=@daily
+      - BACKUP_KEEP_DAYS=7
+      - BACKUP_KEEP_WEEKS=4
+      - BACKUP_KEEP_MONTHS=6
+      - HEALTHCHECK_PORT=80
+
+networks:
+  sonarnet:
+    driver: bridge
