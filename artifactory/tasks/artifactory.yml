@@ -13,7 +13,7 @@
 
 - name: installing Artifactory Enterprise {{ artifactory_version }} version
   yum:
-    name: http://artifactory.wsgc.com/artifactory/simple/ext-release-local/jfrog-artifactory-pro/jfrog-artifactory-pro/{{ artifactory_version }}/jfrog-artifactory-pro-{{ artifactory_version }}.rpm
+    name:#Place holder 
     state: present
 
 - name: make sure artifactory service is enabled on boot
@@ -51,7 +51,7 @@
 
 - name: Download mysql JDBC connector
   get_url:
-    url: https://artifactory.wsgc.com/artifactory/ext-release-local/mysql-connector-java/mysql-connector-java/8.0.16.tar/mysql-connector-java-8.0.16.tar.gz
+    url:#Placeholder 
     dest: /tmp
     mode: '0644'
     validate_certs: no
