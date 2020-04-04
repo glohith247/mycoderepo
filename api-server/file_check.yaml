@@ -1,0 +1,45 @@
+---
+- name: File Checker Netdata
+  hosts: client
+  remote_user: ubuntu
+  tasks:
+    - stat:
+        path: /etc/hosts
+      register: hosts_file
+
+    - shell: hostname
+      register: hostname
+
+    - stat:
+        path: /etc/netdata/scripts/hosts/{{ hostname.stdout }}
+      register: flag_file
+      delegate_to: localhost
+
+      #  - fail:
+      #@ msg: "Whoops! file checksum has changed"
+      #when: hosts_file.stat.checksum != 'a3f51a033f988bc3c16d343ac53bb25f'
+    # - shell: sudo touch /etc/netdata/scripts/hosts/{{ hostname.stdout }}; echo "0" > /etc/netdata/scripts/hosts/{{ hostname.stdout }};
+    #   when: flag_file.stat.exists == false
+    #   delegate_to: localhost
+
+    # - shell: cat /etc/netdata/scripts/hosts/{{ hostname.stdout }}
+    #   register: flag
+    #   delegate_to: localhost
+    #   when: flag_file.stat.exists == true
+
+    # - debug: 
+    #     msg: "{{ hosts_file.stat.checksum }}"
+    #   register: checksum
+
+    # - shell: echo "hosts:-1|g" | nc -w 1 -u localhost 8125 ; echo "0" > /etc/netdata/scripts/hosts/{{ hostname.stdout }};
+    #   when: hosts_file.stat.checksum == 'a3f51a033f988bc3c16d343ac53bb25f' and flag.stdout == "1"
+    #   delegate_to: localhost
+
+    # - shell: echo "hosts:+1|g" | nc -w 1 -u localhost 8125 ; echo "1" > /etc/netdata/scripts/hosts/{{ hostname.stdout }};
+    #   when: hosts_file.stat.checksum  != 'a3f51a033f988bc3c16d343ac53bb25f' and flag.stdout == "0"
+    #   delegate_to: localhost
+
+    # - shell: echo "Everything Looks Good...!!!"
+    #   when: hosts_file.stat.checksum == 'a3f51a033f988bc3c16d343ac53bb25f' and flag.stdout == "0"
+    #   delegate_to: localhost
+
