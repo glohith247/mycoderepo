@@ -1,0 +1,152 @@
+#!/bin/bash
+#
+# mvnrelease-generic <JAVA_VERSION> <arg> ...
+#
+# Calls mvnrelease with the appropriate args, after setting up the
+# various files it needs based on $JAVA_VERSION and whether or not the
+# repository is a DevOps repo (which needs to go to a different
+# destination repository).
+
+set -o errexit
+set -o nounset
+#set -x 
+
+# We are write temporary files that contain copies of credentials.
+# Make them unreadable to others.
+umask 0077
+
+if [[ $# == 0 ]]; then
+    echo "usage: $0 <Java version (1.6, 1.7 or 1.8)> <mvnrelease arg> ..." >&2
+    exit 1
+fi
+
+JAVA_VERSION="$1"
+shift
+
+# FUTURE: do this in mvnrelease, not in this wrapper
+RELEASE_REASON="[RELEASE] Release created for unspecified reason"
+for i in "$@"; do
+    if [[ $i =~ ^--reason= ]]; then
+        RELEASE_REASON="${i##--reason=}"
+    fi
+done
+export RELEASE_REASON
+
+# We will be colocated with our templates; get the (absolute)
+# directory that they're in.
+TEMPLATE_DIR=$( (cd $(dirname "$0"); pwd) )
+MAVEN_SETTINGS_TEMPLATE="file://$TEMPLATE_DIR/mvnrelease.mvntemplate"
+CERT_STORE_MVN_ARG="-Djavax.net.ssl.trustStore=$TEMPLATE_DIR/cacerts-wsi"
+
+case "$JAVA_VERSION" in
+    1.6)
+        export JAVA_HOME=/apps/jdk6
+        MAVEN_OPTS="-Xmx1025m -XX:MaxPermSize=256m $CERT_STORE_MVN_ARG"
+        ;;
+    1.7)
+        export JAVA_HOME=/apps/jdk7
+        MAVEN_OPTS="-Xmx1025m -XX:MaxPermSize=256m $CERT_STORE_MVN_ARG"
+        ;;
+    1.8)
+        export JAVA_HOME=/apps/jdk8
+        MAVEN_OPTS="-Xmx1025m $CERT_STORE_MVN_ARG"
+        ;;
+    *)
+        echo "Invalid JAVA_VERSION supplied as first argument: '$JAVA_VERSION'" >&2
+        exit 1
+        ;;
+esac
+
+export PATH="$JAVA_HOME/bin:$PATH"
+
+
+echo "**** BUILDING WITH JAVA $JAVA_VERSION ****"
+
+# This directory will be used by gcc to store temporary files.  Note:
+# it will *not* be used by mvnrelease, at least not version 2.1.1.  If
+# we need more space for mvnrelease to do its thing, we need to teach
+# it to honor TMPDIR.
+export TMPDIR=/apps/mavenrelease-tmp-mavenbuild
+if [[ ! -d "$TMPDIR" ]]; then
+    mkdir -p "$TMPDIR"  # This must exist or compiles will fail.
+fi
+
+# This tells Git to create commits and tags as mavenbuild, not as ciuser.
+export GIT_COMMITTER_NAME='mavenbuild'
+export GIT_COMMITTER_EMAIL='mavenbuild@wsgc.com'
+export GIT_AUTHOR_NAME="$GIT_COMMITTER_NAME"
+export GIT_AUTHOR_EMAIL="$GIT_COMMITTER_EMAIL"
+
+# Generate the mvnrelease.properties file we should use.  We will
+# customize the following variables in it:
+#
+# __MAVEN_OPTS__               - Value of $MAVEN_OPTS, set above
+# __MAVEN_SETTINGS_TEMPLATE__  - Path to mvnrelease.mvntemplate
+# __RELEASE_URL__              - Artifactory URL to release to, incl. repo
+# __RELEASE_SERVER__           - Artifactory repo name
+# __RELEASE_USER__             - Artifactory user name
+# __RELEASE_PASS__             - Artifactory password for __RELEASE_USER__
+GENERATED_MVNRELEASE_PROPERTIES=$(mktemp -t mvnrelease-XXXXX)
+
+# Determine which properties file to use based on whether this is a
+# DevOps release.
+if [[ $@ =~ eCommerce-DevOps|https://repos.wsgc.com/svn/devops/ ]]; then
+    ARTIFACTORY_SERVER_ID="<RPM repo>"
+    CREDENTIALS_FILE="artifactory-devopsbuild-user"
+else
+    ARTIFACTORY_SERVER_ID="<Maven repo>"
+    CREDENTIALS_FILE="artifactory-mavenbuild-user"
+fi
+
+RELEASE_URL="http://10.7.0.114:8081/artifactory/<rpmrepo-Local>or<mavenrepo-local>/$ARTIFACTORY_SERVER_ID"
+CREDENTIALS_PATH="$HOME/.credentials.d/$CREDENTIALS_FILE"
+
+# Look up user and password in the relevant credentials file. This is
+# somewhat tortured in order not to pollute our variable namespace
+# with whatever randomness happens to be in those files, including
+# USERNAME or PASSWORD.
+RELEASE_USER=$( (source "$CREDENTIALS_PATH"; echo "$USERNAME") )
+RELEASE_PASS=$( (source "$CREDENTIALS_PATH"; echo "$PASSWORD") )
+
+backslashEscapeChar () {
+    # backslashEscapeChar <val> <c>
+    #
+    # Return <val> with all occurrences of character <c> replaced with \<c>.
+    VAL="$1"
+    CHAR_TO_ESCAPE="$2"
+
+    if [[ $CHAR_TO_ESCAPE =~ [\\\[/\.\?\*\+] ]]; then
+        # Protect this character from special interpretation by sed.
+        # (Slash is special because that is our separator.)
+        CHAR_TO_ESCAPE="\\$CHAR_TO_ESCAPE"
+    fi
+
+    echo "$VAL" | sed "s/${CHAR_TO_ESCAPE}/\\\\${CHAR_TO_ESCAPE}/g"
+}
+
+# Escape the values we're going to use for sed substitution replacement text.
+#
+# Backslash has to be escaped to disable sed's special treatment of it.
+# Slash has to be escaped because we're using it as the subst separator.
+for varname in MAVEN_OPTS MAVEN_SETTINGS_TEMPLATE RELEASE_URL ARTIFACTORY_SERVER_ID RELEASE_USER RELEASE_PASS
+do
+    VAL=${!varname}
+    ESCAPED=$(backslashEscapeChar "$VAL" '\')
+    ESCAPED=$(backslashEscapeChar "$ESCAPED" '/')
+    eval "$varname=\$ESCAPED"
+done
+
+# Generate the properties file.
+sed <"$TEMPLATE_DIR/mvnrelease.properties.template" >"$GENERATED_MVNRELEASE_PROPERTIES" \
+    "
+        s/__MAVEN_OPTS__/$MAVEN_OPTS/g
+        s/__MAVEN_SETTINGS_TEMPLATE__/$MAVEN_SETTINGS_TEMPLATE/g
+        s/__RELEASE_URL__/$RELEASE_URL/g
+        s/__ARTIFACTORY_SERVER_ID__/$ARTIFACTORY_SERVER_ID/g
+        s/__RELEASE_USER__/$RELEASE_USER/g
+        s/__RELEASE_PASS__/$RELEASE_PASS/g
+    "
+
+mvnrelease --config="$GENERATED_MVNRELEASE_PROPERTIES" "$@"
+
+rm "$GENERATED_MVNRELEASE_PROPERTIES"

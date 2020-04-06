@@ -1,0 +1,240 @@
+<html>
+  <head>
+    <title>mvnrelease - Usage</title>
+  </head>
+  <body>
+    <h1>mvnrelease - Usage</h1>
+    <p>
+      This document describes the usage of each of the mvnrelease actions.
+      It assumes you've already installed and configured the tool per the
+      installation instructions.
+    </p>
+
+    <h2>Tool Administration</h2>
+
+    <h3><code><b>mvn initialize</b></code></h3>
+
+    <p>
+      This action is provided to create a sample properties file
+      for initializing the local mvnrelease configuration. See the
+      installation instructions for more details.
+    </p>
+
+    <h3><code><b>mvn version</b></code></h3>
+
+    <p>
+      This action displays the current build version of the tool and
+      its major dependencies. It's provided to verify that the installation
+      is of the expected version.
+    </p>
+
+    <h3><code><b>mvn maventemplate</b></code></h3>
+    
+    <p>
+      This action outputs the current maven settings template (as configured
+      in the properties file) to standard output.
+    </p>
+
+    <h2>Source Specifications</h2>
+    <p>
+      The release actions all operate against source code in a
+      remote repository, specified as a URL or specification
+      string:
+    </p>
+
+    <h3>Subversion Specifications</h3>
+    <p>
+      For subversion projects, the specification is the URL
+      to either trunk, a branch, or a tag. The URL can optionally
+      be suffixed with <code><b>@</b><i>revision</i></code> to use
+      a specific revision from the repository.
+    </p>
+
+    <h3>Git Specifications</h3>
+    <p>
+      For git projects, the specification is the git repository
+      specification followed by an optional reference id:
+    </p>
+    <ul>
+      <li><p>
+	Without a reference id the tool will use the <code>master</code>
+	branch.
+      </p></li>
+
+      <li><p>
+	With a reference id of <code><b>#branch/</b><i>branchId</i></code>
+	the reference is to a named branch.
+      </p></li>
+
+      <li><p>
+	With a reference id of <code><b>#tag/</b><i>tagId</i></code>
+	the reference is to a named tag.
+      </p></li>
+
+      <li><p>
+	With a reference id of <code><b>#commit/</b><i>commitId</i></code>
+	the reference is to a specific commit (This is FUTURE functionality
+	and is not fully supported yet).
+      </p></li>
+    </ul>
+
+    <h3>GitHub Enterprise Specifications</h3>
+    <p>
+      In addition to explicit Git support, there is also limited support
+      for the internal GitHub Enterprise instance.
+    </p>
+    <p>
+      For a URL of the form
+      <code><b>https://github.wsgc.com/</b><i>organization</i><b>/</b><i>repository</i></code> this refers to the <code>master</code> branch of that
+      project, accessed via SSH.
+    </p>
+    <p>
+      For a URL of the form
+      <code><b>https://github.wsgc.com/</b><i>organization</i><b>/</b><i>repository</i><b>/tree/</b><i>branchId</i></code> this refers to a specific named
+      <b>branch</b> (Note that there is no similar mechanism to reference a
+      tag due to ambiguity in the GHE web UI).
+    </p>
+
+    <h2>Release Actions</h2>
+    <p>
+      In order to successfully release a project, the following
+      conditions must be met:
+      <ul>
+	<li>The project must be self-contained in source control (no externals)
+	with its root specified by a conventional specification for the
+	appropriate source control system..</li>
+	<li>The project must refer only to fixed (no snapshots, no ranges)
+	versions of other artifacts (transitively). Property defined
+	versions (such as <code>${foundation.version}</code> can be
+	specified on the mvnrelease command line using the depversion
+	option, e.g. <code>--depversion=foundation-version=2.5.14</code>)</li>
+	<li>All dependency artifacts must be present in the artifact
+	repositories referenced by the maven settings template (With the
+	exception of the <code>com.wsgc.ecommerce:jdbc-properties</code>
+	artifact, which must be placed into the mvnrelease local repository
+	beforehand)</li>
+	<li>The project must build cleanly for an mvn install.</li>
+	<li>The maven target directory (or directories) must be 
+	configured as ignored using the an appropriate mechanism for
+	the source control system (e.g. svn:ignore property on
+	module folders, or .gitignore files).</li>
+      </ul>
+    </p>
+    <p>
+      The maven release process executes the following steps (note that
+      since these steps alter the local maven repository, it's not safe to
+      run mvnrelease for more than one project against the same
+      local repository):
+
+      <ol>
+	<li>Check out the project from source control.</li>
+	<li>Verify the integrity of the POM file relationships.</li>
+	<li>Verify the POM file versions (For non-release-tag
+	builds, apply any command line version mappings)</li>
+	<li>Erase any WSGC artifacts from the local repository
+	(except for jdbc-properties).</li>
+	<li>Perform a <code>mvn install</code> to verify the build.</li>
+	<li>Check that there are no extraneous files created, or version
+	controlled files altered, by the process.</li>
+	<li>Perform a <code>mvn dependency:resolve</code> check to make
+	sure all versions are fixed and not snapshots.</li>
+      </ol>
+    </p>
+
+    <h3><code><b>mvnrelease status</b> <i>&lt;sourceSpec&gt;</i></code></h3>
+    
+    <p>
+      The status action is primarily provided as a shorthand means to
+      see the existing tags for a project, but also provides a useful
+      test of the source control integration for a configuration (no maven
+      commands are executed during a status check).
+    </p>
+    <p>
+      In general the specified source specification must be
+      valid enough to contact the repository and obtain the requested
+      information, regardless of whether it can actually be built.
+    </p>
+
+    <h3><code><b>mvnrelease test</b> <i>&lt;sourceSpec&gt;</i></code></h3>
+    <p>
+      The test action checks out a project and performs all of the normal
+      pre-release verifications against that project without creating a
+      release tag or publishing any artifacts. This is essentially a dry run
+      for the full release process.
+    </p>
+
+    <h3><code><b>mvnrelease release</b> <i>&lt;sourceSpec&gt;</i> <i>&lt;releaseType&gt;</i></code></h3>
+    <p>
+      The release action can be performed on trunk, branch, and
+      non-release tag URL's. The action first checks out and verifies the
+      project POM configuration, and then establishes (based on the
+      project's snapshot revision, and the existing source control release
+      tags) the appropriate version to use for a new release. Then the
+      project is build and verified, and upon success a new source control
+      release tag will be created (after user confirmation).
+    </p>
+    <p>
+      The <i>releaseType</i> parameter indicates the type of release to
+      create, it can be <code><b>final</b></code> for a final release or
+      <code><b>rc</b></code> for a release candidate.
+    </p>
+    <p>
+      The release action does not publish any artifacts, it simply creates
+      a verified tag from which artifacts can be produced later via the
+      tool or another process.
+    </p>
+
+    <h3><code><b>mvnrelease publish</b> <i>&lt;sourceSpec&gt;</i> <i>&lt;releaseType&gt;</i></code></h3>
+    <p>
+      The publish action can be used on any trunk, branch, or release tag
+      URL. For URL's that are not release tags, the action will first
+      perform all of the steps of a release, for release tags it will
+      check out and verify the project structure, perform an install build,
+      and verify dependencies as normal.
+    </p>
+    <p>
+      The <i>releaseType</i> parameter indicates the type of release to
+      create, it can be <code><b>final</b></code> for a final release or
+      <code><b>rc</b></code> for a release candidate.
+    </p>
+    <p>
+      If the release or compilation step is successful, then the user
+      is prompted to confirm publishing, and if approved the
+      <code>mvn deploy</code> process is used to publish new artifacts
+      to the configured repository.
+    </p>
+
+    <h3><code><b>mvnrelease branch</b> <i>&lt;sourceSpec&gt; &lt;branchId&gt;</i></code></h3>
+    <p>
+      The branch action is a convenience action to create a branch from
+      the trunk, branch, or tag of a project, producing a branch with a
+      snapshot version (regardless of the source version), and allowing
+      application of dependency version changes
+      (via <code>--depversion</code>). The branchId parameter specifies
+      the name of the branch to create (e.g. "xyztest_ds")
+    </p>
+
+    <h2>Example</h2>
+    <p>
+      An example, using mvnrelease to perform a test release on itself,
+      with a specific SVN version of the tool and using an alternate
+      version of the utilities packages:
+
+      <pre>
+	$ <b>mvnrelease test https://thevault.wsgc.com/svn/core/tools/java6/mvnrelease/trunk@111780 \
+	&nbsp;&nbsp;&nbsp;&nbsp;--depversion=utilities.version=1.0.1</b>
+	Changing to /Users/dstephens/work/usr/mvnrelease work directory
+	Testing release suitability {Steps: checkout, configure, compile, verify}
+	[checkout] Checking out 'https://thevault.wsgc.com/svn/core/tools/java6/mvnrelease/trunk/@111780' as source
+	Setting ${utilities.version} = 1.0.1 (from 1.0.2)
+	[configure] Updated POM versions...
+	[compile] Running maven install to compile project...
+	[compile] Maven install complete.
+	[verify] Running maven dependency resolution for verification...
+	[verify] Maven dependency check complete.
+	OK Test completed successfully!
+      </pre>
+    <hr />
+    <i>$Id$</i>
+  </body>
+</html>

@@ -1,0 +1,108 @@
+<?xml version="1.0"?>
+<settings>
+  <!-- localRepository
+   | The path to the local repository maven will use to store artifacts.
+   |
+   | Default: ~/.m2/repository
+  <localRepository>/path/to/local/repo</localRepository>
+  -->
+  <localRepository>@@@LOCALREPO@@@</localRepository>
+  <!-- interactiveMode
+   | This will determine whether maven prompts you when it needs input. If set to false,
+   | maven will use a sensible default value, perhaps based on some other setting, for
+   | the parameter in question.
+   |
+   | Default: true
+  <interactiveMode>true</interactiveMode>
+  -->
+  <interactiveMode>false</interactiveMode>
+  <!-- offline
+   | Determines whether maven should attempt to connect to the network when executing a build.
+   | This will have an effect on artifact downloads, artifact deployment, and others.
+   |
+   | Default: false
+  <offline>false</offline>
+  -->
+  <offline>false</offline>
+  <!-- proxies
+   | This is a list of proxies which can be used on this machine to connect to the network.
+   | Unless otherwise specified (by system property or command-line switch), the first proxy
+   | specification in this list marked as active will be used.
+   |-->
+  <proxies>
+  </proxies>
+  <servers>
+    <server>
+      <!-- Credentials that will be used when deploying. -->
+      <id>@@@RELEASESERVER@@@</id>
+      <username>@@@RELEASEUSER@@@</username>
+      <password>@@@RELEASEPASS@@@</password>
+    </server>
+    <server>
+      <id>artifactory</id>
+      <!--
+          Credentials that will be used during build.  mvnrelease
+          currently understands only release credentials, not build
+          credentials, so you need to make sure that the release
+          credentials you use also have read permission to the URL
+          listed in the 'central' repository below.
+      -->
+      <username>@@@RELEASEUSER@@@</username>
+      <password>@@@RELEASEPASS@@@</password>
+    </server>
+    <server>
+      <id>central-proxy</id>
+      <!--
+          Credentials that will be used during build.  mvnrelease
+          currently understands only release credentials, not build
+          credentials, so you need to make sure that the release
+          credentials you use also have read permission to the URL
+          listed in the 'central' repository below.
+      -->
+      <username>@@@RELEASEUSER@@@</username>
+      <password>@@@RELEASEPASS@@@</password>
+    </server>
+  </servers>
+  <profiles>
+    <profile>
+      <id>mvnrelease</id>
+      <repositories>
+        <repository>
+          <!-- Overrides the built in maven repository -->
+          <id>artifactory</id>
+          <name>Artifactory Virtual Repository for WSGC eCommerce Releases</name>
+          <url>http://10.7.0.114:8081/artifactory/rpmrepo-Local</url>
+          <snapshots>
+            <enabled>false</enabled>
+          </snapshots>
+        </repository>
+      </repositories>
+      <pluginRepositories>
+        <pluginRepository>
+          <!-- Overrides the built in maven repository -->
+          <id>artifactory</id>
+          <name>Artifactory Virtual Repository for WSGC eCommerce Releases</name>
+	  <url>https://10.7.0.114:8081/artifactory/mvnrelease</url>
+          <snapshots>
+            <enabled>false</enabled>
+          </snapshots>
+        </pluginRepository>
+      </pluginRepositories>
+    </profile>
+  </profiles>
+  <!-- activeProfiles
+   | List of profiles that are active for all builds.
+   |
+  -->
+  <activeProfiles>
+    <activeProfile>mvnrelease</activeProfile>
+  </activeProfiles>
+  <mirrors>
+    <mirror>
+      <id>central-proxy</id>
+      <name>Mirror of central</name>
+      <url>https://10.7.0.114:8081/artifactory/mvnrelease</url>
+      <mirrorOf>central</mirrorOf>
+    </mirror>
+  </mirrors>
+</settings>

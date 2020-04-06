@@ -1,0 +1,37 @@
+# Configuration properties for mvnrelease
+#
+# SET THESE PROPERTIES TO THEIR APPROPRIATE VALUES FOR YOUR ENVIRONMENT
+
+# Maven command setup and configuration
+# mvn.command    - The maven command to execute
+# mvn.env.<name> - Value for environment setting for maven, blank to clear
+
+mvn.command = mvn
+mvn.env.MAVEN_OPTS = __MAVEN_OPTS__
+mvn.env.MAVEN_HOME =
+
+# Location of maven settings template.
+# mvn.settings.template - URI for maven settings template
+
+mvn.settings.template = __MAVEN_SETTINGS_TEMPLATE__
+
+# Settings for maven artifact deployment
+# mvn.settings.release.url    - The URL for the artifact repository
+# mvn.settings.release.server - The server ID for artifact deployment in the maven config
+# mvn.settings.release.user   - The username for artifact repository deployment
+# mvn.settings.release.pass   - The password for artifact repository deployment
+
+
+mvn.settings.release.url = __RELEASE_URL__
+mvn.settings.release.server = __ARTIFACTORY_SERVER_ID__
+mvn.settings.release.user = __RELEASE_USER__
+mvn.settings.release.pass = __RELEASE_PASS__
+
+# Subversion command setup and configuration
+# svn.command          - The subversion command to execute
+# svn.ignore_externals - Whether to ignore externals during checkout (true/false - default true)
+# svn.env.<name>       - Value for environment setting for subversion, blank to clear
+
+svn.command = /usr/bin/svn
+
+# End.
