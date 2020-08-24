@@ -3,7 +3,7 @@
 import os
 import csv
 import subprocess
-import argparse
+#import argparse
 
 
 # Get kubectl ouput
